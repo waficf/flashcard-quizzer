@@ -40,27 +40,50 @@ class QuizMode(ABC):
     @abstractmethod
     def get_configuration_options(self) -> Dict[str, Any]:
         """
-        Get available configuration options for this mode
+        Get available configuration options for this mode.
+        
+        Must be implemented by subclasses to return the specific
+        configuration options supported by that mode.
         
         Returns:
-            Dictionary of configuration options with their descriptions
+            Dict[str, Any]: Dictionary describing configuration options,
+                          their types, defaults, and constraints
         """
         pass
     
     def get_mode_info(self) -> Dict[str, str]:
-        """Get basic information about this mode"""
+        """
+        Get basic information about this mode.
+        
+        Returns:
+            Dict[str, str]: Dictionary with 'name' and 'description' keys
+        """
         return {
             "name": self.name,
             "description": self.description
         }
     
     def get_quiz_engine(self) -> Optional[QuizEngine]:
-        """Get the current quiz engine instance"""
+        """
+        Get the current quiz engine instance.
+        
+        Returns:
+            Optional[QuizEngine]: The active quiz engine, or None if not yet set up
+        """
         return self.quiz_engine
 
 
 class StudyMode(QuizMode):
-    """Standard study mode with configurable strategy"""
+    """
+    Standard study mode with configurable strategy.
+    
+    Allows users to study all flashcards with choice of presentation strategy:
+    - Sequential: Cards in order (1, 2, 3...)
+    - Random: Shuffled presentation
+    - Adaptive: Prioritizes cards with lower success rates
+    
+    Supports limiting the number of cards studied in a session.
+    """
     
     def __init__(self):
         super().__init__(
@@ -84,7 +107,20 @@ class StudyMode(QuizMode):
         }
     
     def setup_quiz(self, flashcards: List[Dict[str, Any]], **kwargs) -> bool:
-        """Setup study mode quiz"""
+        """
+        Setup study mode quiz.
+        
+        Configuration options:
+            strategy (str): 'sequential', 'random', or 'adaptive' (default: 'random')
+            max_cards (int): Maximum cards to study, 0 for all (default: 0)
+        
+        Args:
+            flashcards: List of validated flashcard dictionaries
+            **kwargs: Configuration options (strategy, max_cards)
+            
+        Returns:
+            bool: True if setup successful, False on error
+        """
         try:
             strategy_name = kwargs.get("strategy", "random")
             max_cards = kwargs.get("max_cards", 0)
@@ -105,7 +141,17 @@ class StudyMode(QuizMode):
 
 
 class PracticeMode(QuizMode):
-    """Practice mode focusing on difficult cards"""
+    """
+    Practice mode focusing on difficult cards.
+    
+    Filters flashcards by success rate to identify cards that need practice:
+    - Only shows cards with success rate below the difficulty threshold
+    - Newly attempted cards are included
+    - Uses adaptive strategy to prioritize most difficult cards
+    - Useful for targeted learning and improvement
+    
+    Default threshold: 60% success rate (cards with <60% success are practiced)
+    """
     
     def __init__(self):
         super().__init__(
@@ -131,7 +177,20 @@ class PracticeMode(QuizMode):
         }
     
     def setup_quiz(self, flashcards: List[Dict[str, Any]], **kwargs) -> bool:
-        """Setup practice mode quiz"""
+        """
+        Setup practice mode quiz with filtered difficult cards.
+        
+        Configuration options:
+            difficulty_threshold (float): Success rate threshold (0.0-1.0, default: 0.6)
+            max_cards (int): Maximum cards to practice, 0 for all (default: 20)
+        
+        Args:
+            flashcards: List of validated flashcard dictionaries
+            **kwargs: Configuration options (difficulty_threshold, max_cards)
+            
+        Returns:
+            bool: True if setup successful, False if no difficult cards found
+        """
         try:
             difficulty_threshold = kwargs.get("difficulty_threshold", 0.6)
             max_cards = kwargs.get("max_cards", 20)
